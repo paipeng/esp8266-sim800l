@@ -48,15 +48,23 @@ void setup() {
 
   if(DEBUG) Serial.println("SETUP");
   delay(3000);
+
+#if 0
   initSimModule();
   setGprs();
-  postData();
-  terminateHttp();
+  //postData();
+  //terminateHttp();
   endGprs();
+#endif  
 }
 
 void loop() {
-  delay(60000);
+  if (Serial.available()) {
+    serialSIM800.write(Serial.read());
+  } else if (serialSIM800.available()) {
+    Serial.write(serialSIM800.read());
+  }
+  delay(100);
 }
 
 void initSimModule() {
