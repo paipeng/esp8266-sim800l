@@ -10,9 +10,16 @@
  */
 
 #define DEBUG 1
+#if defined(ESP32)
+#define SIM800_TX_PIN 16 // TX pin of SIM800L
+#define SIM800_RX_PIN 17 // RX pin of SIM800L
+#define SIM800_BAUD_RATE 9600
+#else
 #define SIM800_TX_PIN D1 // TX pin of SIM800L
 #define SIM800_RX_PIN D2 // RX pin of SIM800L
 
+#define SIM800_BAUD_RATE 115200
+#endif
 SoftwareSerial serialSIM800(SIM800_TX_PIN,SIM800_RX_PIN);
 char responseBuffer[256];
  
@@ -44,10 +51,11 @@ char *httpEnd[]       = { (char *)"AT+HTTPTERM\r\n" }; // Terminate HTTP Service
 void setup() {
   Serial.begin(115200);
   while(!Serial);
-  serialSIM800.begin(115200);
+  serialSIM800.begin(SIM800_BAUD_RATE);
 
   if(DEBUG) Serial.println("SETUP");
   delay(3000);
+  test_sim800_module();
 
 #if 0
   initSimModule();
@@ -59,13 +67,51 @@ void setup() {
 }
 
 void loop() {
-  if (Serial.available()) {
-    serialSIM800.write(Serial.read());
-  } else if (serialSIM800.available()) {
-    Serial.write(serialSIM800.read());
-  }
-  delay(100);
+  updateSerial();
 }
+
+
+void updateSerial()
+{
+  delay(500);
+  while (Serial.available()) 
+  {
+    serialSIM800.write(Serial.read());//Forward what Serial received to Software Serial Port
+  }
+  while(serialSIM800.available()) 
+  {
+    Serial.write(serialSIM800.read());//Forward what Software Serial received to Serial Port
+  }
+}
+
+void test_sim800_module()
+{
+  serialSIM800.println("AT");
+  updateSerial();
+  Serial.println();
+  serialSIM800.println("AT+CSQ");
+  updateSerial();
+  serialSIM800.println("AT+CCID");
+  updateSerial();
+  serialSIM800.println("AT+CREG?");
+  updateSerial();
+  serialSIM800.println("ATI");
+  updateSerial();
+  serialSIM800.println("AT+CBC");
+  updateSerial();
+}
+
+void send_SMS()
+{
+  serialSIM800.println("AT+CMGF=1"); // Configuring TEXT mode
+  updateSerial();
+  serialSIM800.println("AT+CMGS=\"+919804049270\"");//change ZZ with country code and xxxxxxxxxxx with phone number to sms
+  updateSerial();
+  serialSIM800.print("Circuit Digest"); //text content
+  updateSerial();
+  serialSIM800.write(26);
+}
+
 
 void initSimModule() {
   writeToSim(initSim, sizeof(initSim)/sizeof(*initSim));
